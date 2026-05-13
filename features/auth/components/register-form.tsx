@@ -1,14 +1,10 @@
 'use client';
 
-import { startTransition, useActionState, useEffect } from 'react';
 import Link from 'next/link';
-import { useForm } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AppImage } from '@/components/ui/app-image';
-import {
-  registerAction,
-  type RegisterActionResult,
-} from '../actions/register-action';
+import { registerAction } from '../actions/register-action';
 import { registerSchema, type RegisterInput } from '../schemas/auth-schemas';
 
 // firstName / lastName are added on top of the static design — the backend
@@ -17,42 +13,32 @@ import { registerSchema, type RegisterInput } from '../schemas/auth-schemas';
 // matches the design verbatim.
 
 export function RegisterForm() {
-  const [state, formAction, isPending] = useActionState<
-    RegisterActionResult | null,
-    FormData
-  >(registerAction, null);
-
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
     setError,
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     mode: 'onBlur',
   });
 
-  useEffect(() => {
-    if (state && !state.ok && state.fieldErrors) {
-      for (const [name, messages] of Object.entries(state.fieldErrors)) {
+  const onSubmit: SubmitHandler<RegisterInput> = async (data) => {
+    const result = await registerAction(data);
+    if (result.ok) return;
+    if (result.fieldErrors) {
+      for (const [name, messages] of Object.entries(result.fieldErrors)) {
         if (messages?.[0]) {
           setError(name as keyof RegisterInput, { message: messages[0] });
         }
       }
     }
-  }, [state, setError]);
-
-  const onSubmit = (data: RegisterInput) => {
-    const formData = new FormData();
-    formData.append('firstName', data.firstName);
-    formData.append('lastName', data.lastName);
-    formData.append('email', data.email);
-    formData.append('password', data.password);
-    formData.append('confirmPassword', data.confirmPassword);
-    startTransition(() => formAction(formData));
+    if (result.formError) {
+      setError('root.serverError', { type: 'server', message: result.formError });
+    }
   };
 
-  const formError = state && !state.ok ? state.formError : undefined;
+  const serverError = errors.root?.serverError?.message;
 
   return (
     <div className="_social_registration_content">
@@ -88,12 +74,9 @@ export function RegisterForm() {
         onSubmit={handleSubmit(onSubmit)}
         noValidate
       >
-        {formError && (
-          <div
-            role="alert"
-            style={{ color: '#d32f2f', marginBottom: 12, fontSize: 14 }}
-          >
-            {formError}
+        {serverError && (
+          <div role="alert" style={{ color: '#d32f2f', marginBottom: 12, fontSize: 14 }}>
+            {serverError}
           </div>
         )}
 
@@ -229,9 +212,9 @@ export function RegisterForm() {
               <button
                 type="submit"
                 className="_social_registration_form_btn_link _btn1"
-                disabled={isPending}
+                disabled={isSubmitting}
               >
-                {isPending ? 'Creating account…' : 'Login now'}
+                {isSubmitting ? 'Creating account…' : 'Login now'}
               </button>
             </div>
           </div>

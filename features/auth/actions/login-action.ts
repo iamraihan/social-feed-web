@@ -5,28 +5,23 @@ import { z } from 'zod';
 import { ApiClientError } from '@/lib/api-client';
 import { loginRequest } from '../api/auth-api';
 import { setSessionCookies } from '../lib/session';
-import { loginSchema } from '../schemas/auth-schemas';
+import { loginSchema, type LoginInput } from '../schemas/auth-schemas';
 
-// Discriminated-union result so the form can render either field errors,
-// a global form error, or trigger a success-side effect. Server actions can
-// return values to Client Components via useFormState / useActionState.
+// Server Action invoked directly by RHF's onSubmit with typed input —
+// no FormData round-trip, no useActionState. The action re-validates with
+// the same Zod schema (the client check is for UX; the server is the
+// source of truth) before touching the backend.
 
 export type LoginActionResult =
   | { ok: true }
   | {
       ok: false;
-      fieldErrors?: Partial<Record<'email' | 'password', string[]>>;
+      fieldErrors?: Partial<Record<keyof LoginInput, string[]>>;
       formError?: string;
     };
 
-export async function loginAction(
-  _prev: LoginActionResult | null,
-  formData: FormData,
-): Promise<LoginActionResult> {
-  const parsed = loginSchema.safeParse({
-    email: formData.get('email'),
-    password: formData.get('password'),
-  });
+export async function loginAction(input: LoginInput): Promise<LoginActionResult> {
+  const parsed = loginSchema.safeParse(input);
   if (!parsed.success) {
     return {
       ok: false,
@@ -44,7 +39,6 @@ export async function loginAction(
     });
   } catch (err) {
     if (err instanceof ApiClientError) {
-      // Backend semantic codes → human-friendly form errors.
       if (err.code === 'UNAUTHORIZED') {
         return { ok: false, formError: 'Invalid email or password.' };
       }
@@ -55,16 +49,13 @@ export async function loginAction(
         };
       }
       if (err.code === 'VALIDATION_FAILED') {
-        return {
-          ok: false,
-          formError: err.details?.[0] ?? err.message,
-        };
+        return { ok: false, formError: err.details?.[0] ?? err.message };
       }
       return { ok: false, formError: err.message };
     }
     return { ok: false, formError: 'Something went wrong. Try again.' };
   }
 
-  // `redirect` throws — must run outside try/catch so it isn't swallowed.
+  // `redirect` throws — keep it outside try/catch so it isn't swallowed.
   redirect('/');
 }

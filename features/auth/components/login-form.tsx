@@ -1,58 +1,49 @@
 'use client';
 
-import { startTransition, useActionState, useEffect } from 'react';
 import Link from 'next/link';
-import { useForm } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AppImage } from '@/components/ui/app-image';
-import { loginAction, type LoginActionResult } from '../actions/login-action';
+import { loginAction } from '../actions/login-action';
 import { loginSchema, type LoginInput } from '../schemas/auth-schemas';
 
-// Industry-standard form pattern:
-//   - React Hook Form owns input state + client-side Zod validation
-//   - Server action runs via useActionState; it re-validates with the same
-//     Zod schema and talks to the backend
-//   - state carries field/form errors back from the server
-//
-// The static design's "Remember me" / "Forgot password?" stay visual only —
-// implementing them requires backend support that doesn't exist yet.
+// RHF-native flow:
+//   1. zodResolver runs the same Zod schema client-side (UX) — invalid input
+//      never reaches the server.
+//   2. handleSubmit gives us typed data; we await the server action with it.
+//   3. On non-ok: write field errors and the form-level error straight into
+//      RHF via setError, synchronously. No useEffect / state sync needed.
+//   4. RHF tracks isSubmitting natively — no useActionState pending state.
+//   5. On success the action calls `redirect('/')` — control never returns to
+//      the client, so we don't need a success branch here.
 
 export function LoginForm() {
-  const [state, formAction, isPending] = useActionState<
-    LoginActionResult | null,
-    FormData
-  >(loginAction, null);
-
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
     setError,
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     mode: 'onBlur',
   });
 
-  // Surface server-side field errors via RHF so they sit next to the input
-  // (consistent UX with client-side errors).
-  useEffect(() => {
-    if (state && !state.ok && state.fieldErrors) {
-      for (const [name, messages] of Object.entries(state.fieldErrors)) {
+  const onSubmit: SubmitHandler<LoginInput> = async (data) => {
+    const result = await loginAction(data);
+    if (result.ok) return; // unreachable — action redirected
+    if (result.fieldErrors) {
+      for (const [name, messages] of Object.entries(result.fieldErrors)) {
         if (messages?.[0]) {
           setError(name as keyof LoginInput, { message: messages[0] });
         }
       }
     }
-  }, [state, setError]);
-
-  const onSubmit = (data: LoginInput) => {
-    const formData = new FormData();
-    formData.append('email', data.email);
-    formData.append('password', data.password);
-    startTransition(() => formAction(formData));
+    if (result.formError) {
+      setError('root.serverError', { type: 'server', message: result.formError });
+    }
   };
 
-  const formError = state && !state.ok ? state.formError : undefined;
+  const serverError = errors.root?.serverError?.message;
 
   return (
     <div className="_social_login_content">
@@ -84,12 +75,9 @@ export function LoginForm() {
       </div>
 
       <form className="_social_login_form" onSubmit={handleSubmit(onSubmit)} noValidate>
-        {formError && (
-          <div
-            role="alert"
-            style={{ color: '#d32f2f', marginBottom: 12, fontSize: 14 }}
-          >
-            {formError}
+        {serverError && (
+          <div role="alert" style={{ color: '#d32f2f', marginBottom: 12, fontSize: 14 }}>
+            {serverError}
           </div>
         )}
 
@@ -167,9 +155,9 @@ export function LoginForm() {
               <button
                 type="submit"
                 className="_social_login_form_btn_link _btn1"
-                disabled={isPending}
+                disabled={isSubmitting}
               >
-                {isPending ? 'Signing in…' : 'Login now'}
+                {isSubmitting ? 'Signing in…' : 'Login now'}
               </button>
             </div>
           </div>
