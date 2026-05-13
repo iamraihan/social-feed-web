@@ -1,9 +1,59 @@
-import Link from 'next/link';
-import { AppImage } from '@/components/ui/app-image';
+'use client';
 
-// Faithful port of registration.html's `_social_registration_content` block.
+import { startTransition, useActionState, useEffect } from 'react';
+import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AppImage } from '@/components/ui/app-image';
+import {
+  registerAction,
+  type RegisterActionResult,
+} from '../actions/register-action';
+import { registerSchema, type RegisterInput } from '../schemas/auth-schemas';
+
+// firstName / lastName are added on top of the static design — the backend
+// requires them. The rest of the form (Google button, Or divider, terms
+// checkbox, "Login now" button label which is a typo in the source HTML)
+// matches the design verbatim.
 
 export function RegisterForm() {
+  const [state, formAction, isPending] = useActionState<
+    RegisterActionResult | null,
+    FormData
+  >(registerAction, null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setError,
+  } = useForm<RegisterInput>({
+    resolver: zodResolver(registerSchema),
+    mode: 'onBlur',
+  });
+
+  useEffect(() => {
+    if (state && !state.ok && state.fieldErrors) {
+      for (const [name, messages] of Object.entries(state.fieldErrors)) {
+        if (messages?.[0]) {
+          setError(name as keyof RegisterInput, { message: messages[0] });
+        }
+      }
+    }
+  }, [state, setError]);
+
+  const onSubmit = (data: RegisterInput) => {
+    const formData = new FormData();
+    formData.append('firstName', data.firstName);
+    formData.append('lastName', data.lastName);
+    formData.append('email', data.email);
+    formData.append('password', data.password);
+    formData.append('confirmPassword', data.confirmPassword);
+    startTransition(() => formAction(formData));
+  };
+
+  const formError = state && !state.ok ? state.formError : undefined;
+
   return (
     <div className="_social_registration_content">
       <div className="_social_registration_right_logo _mar_b28">
@@ -13,7 +63,6 @@ export function RegisterForm() {
           width={148}
           height={40}
           className="_right_logo"
-          unoptimized
         />
       </div>
       <p className="_social_registration_content_para _mar_b8">Get Started Now</p>
@@ -27,7 +76,6 @@ export function RegisterForm() {
           width={20}
           height={20}
           className="_google_img"
-          unoptimized
         />
         <span>Register with google</span>
       </button>
@@ -35,26 +83,122 @@ export function RegisterForm() {
         <span>Or</span>
       </div>
 
-      <form className="_social_registration_form">
+      <form
+        className="_social_registration_form"
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+      >
+        {formError && (
+          <div
+            role="alert"
+            style={{ color: '#d32f2f', marginBottom: 12, fontSize: 14 }}
+          >
+            {formError}
+          </div>
+        )}
+
         <div className="row">
-          <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
+          <div className="col-xl-6 col-lg-6 col-md-6 col-sm-12">
             <div className="_social_registration_form_input _mar_b14">
-              <label className="_social_registration_label _mar_b8">Email</label>
-              <input type="email" className="form-control _social_registration_input" />
+              <label className="_social_registration_label _mar_b8" htmlFor="firstName">
+                First name
+              </label>
+              <input
+                id="firstName"
+                type="text"
+                autoComplete="given-name"
+                className="form-control _social_registration_input"
+                aria-invalid={!!errors.firstName}
+                {...register('firstName')}
+              />
+              {errors.firstName && (
+                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
+                  {errors.firstName.message}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="col-xl-6 col-lg-6 col-md-6 col-sm-12">
+            <div className="_social_registration_form_input _mar_b14">
+              <label className="_social_registration_label _mar_b8" htmlFor="lastName">
+                Last name
+              </label>
+              <input
+                id="lastName"
+                type="text"
+                autoComplete="family-name"
+                className="form-control _social_registration_input"
+                aria-invalid={!!errors.lastName}
+                {...register('lastName')}
+              />
+              {errors.lastName && (
+                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
+                  {errors.lastName.message}
+                </p>
+              )}
             </div>
           </div>
           <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
             <div className="_social_registration_form_input _mar_b14">
-              <label className="_social_registration_label _mar_b8">Password</label>
-              <input type="password" className="form-control _social_registration_input" />
+              <label className="_social_registration_label _mar_b8" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                className="form-control _social_registration_input"
+                aria-invalid={!!errors.email}
+                {...register('email')}
+              />
+              {errors.email && (
+                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
+                  {errors.email.message}
+                </p>
+              )}
             </div>
           </div>
           <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
             <div className="_social_registration_form_input _mar_b14">
-              <label className="_social_registration_label _mar_b8">
+              <label className="_social_registration_label _mar_b8" htmlFor="password">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                className="form-control _social_registration_input"
+                aria-invalid={!!errors.password}
+                {...register('password')}
+              />
+              {errors.password && (
+                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
+            <div className="_social_registration_form_input _mar_b14">
+              <label
+                className="_social_registration_label _mar_b8"
+                htmlFor="confirmPassword"
+              >
                 Repeat Password
               </label>
-              <input type="password" className="form-control _social_registration_input" />
+              <input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                className="form-control _social_registration_input"
+                aria-invalid={!!errors.confirmPassword}
+                {...register('confirmPassword')}
+              />
+              {errors.confirmPassword && (
+                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
+                  {errors.confirmPassword.message}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -82,8 +226,12 @@ export function RegisterForm() {
         <div className="row">
           <div className="col-lg-12 col-md-12 col-xl-12 col-sm-12">
             <div className="_social_registration_form_btn _mar_t40 _mar_b60">
-              <button type="button" className="_social_registration_form_btn_link _btn1">
-                Login now
+              <button
+                type="submit"
+                className="_social_registration_form_btn_link _btn1"
+                disabled={isPending}
+              >
+                {isPending ? 'Creating account…' : 'Login now'}
               </button>
             </div>
           </div>
@@ -94,8 +242,7 @@ export function RegisterForm() {
         <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
           <div className="_social_registration_bottom_txt">
             <p className="_social_registration_bottom_txt_para">
-              Don&apos;t have an account?{' '}
-              <Link href="/login">Create New Account</Link>
+              Already have an account? <Link href="/login">Login</Link>
             </p>
           </div>
         </div>

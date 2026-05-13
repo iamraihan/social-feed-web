@@ -1,9 +1,59 @@
-import Link from 'next/link';
-import { AppImage } from '@/components/ui/app-image';
+'use client';
 
-// Faithful port of login.html's `_social_login_content` block.
+import { startTransition, useActionState, useEffect } from 'react';
+import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AppImage } from '@/components/ui/app-image';
+import { loginAction, type LoginActionResult } from '../actions/login-action';
+import { loginSchema, type LoginInput } from '../schemas/auth-schemas';
+
+// Industry-standard form pattern:
+//   - React Hook Form owns input state + client-side Zod validation
+//   - Server action runs via useActionState; it re-validates with the same
+//     Zod schema and talks to the backend
+//   - state carries field/form errors back from the server
+//
+// The static design's "Remember me" / "Forgot password?" stay visual only —
+// implementing them requires backend support that doesn't exist yet.
 
 export function LoginForm() {
+  const [state, formAction, isPending] = useActionState<
+    LoginActionResult | null,
+    FormData
+  >(loginAction, null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setError,
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    mode: 'onBlur',
+  });
+
+  // Surface server-side field errors via RHF so they sit next to the input
+  // (consistent UX with client-side errors).
+  useEffect(() => {
+    if (state && !state.ok && state.fieldErrors) {
+      for (const [name, messages] of Object.entries(state.fieldErrors)) {
+        if (messages?.[0]) {
+          setError(name as keyof LoginInput, { message: messages[0] });
+        }
+      }
+    }
+  }, [state, setError]);
+
+  const onSubmit = (data: LoginInput) => {
+    const formData = new FormData();
+    formData.append('email', data.email);
+    formData.append('password', data.password);
+    startTransition(() => formAction(formData));
+  };
+
+  const formError = state && !state.ok ? state.formError : undefined;
+
   return (
     <div className="_social_login_content">
       <div className="_social_login_left_logo _mar_b28">
@@ -13,7 +63,6 @@ export function LoginForm() {
           width={148}
           height={40}
           className="_left_logo"
-          unoptimized
         />
       </div>
       <p className="_social_login_content_para _mar_b8">Welcome back</p>
@@ -27,7 +76,6 @@ export function LoginForm() {
           width={20}
           height={20}
           className="_google_img"
-          unoptimized
         />
         <span>Or sign-in with google</span>
       </button>
@@ -35,18 +83,55 @@ export function LoginForm() {
         <span>Or</span>
       </div>
 
-      <form className="_social_login_form">
+      <form className="_social_login_form" onSubmit={handleSubmit(onSubmit)} noValidate>
+        {formError && (
+          <div
+            role="alert"
+            style={{ color: '#d32f2f', marginBottom: 12, fontSize: 14 }}
+          >
+            {formError}
+          </div>
+        )}
+
         <div className="row">
           <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
             <div className="_social_login_form_input _mar_b14">
-              <label className="_social_login_label _mar_b8">Email</label>
-              <input type="email" className="form-control _social_login_input" />
+              <label className="_social_login_label _mar_b8" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                className="form-control _social_login_input"
+                aria-invalid={!!errors.email}
+                {...register('email')}
+              />
+              {errors.email && (
+                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
+                  {errors.email.message}
+                </p>
+              )}
             </div>
           </div>
           <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
             <div className="_social_login_form_input _mar_b14">
-              <label className="_social_login_label _mar_b8">Password</label>
-              <input type="password" className="form-control _social_login_input" />
+              <label className="_social_login_label _mar_b8" htmlFor="password">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                className="form-control _social_login_input"
+                aria-invalid={!!errors.password}
+                {...register('password')}
+              />
+              {errors.password && (
+                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
+                  {errors.password.message}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -79,8 +164,12 @@ export function LoginForm() {
         <div className="row">
           <div className="col-lg-12 col-md-12 col-xl-12 col-sm-12">
             <div className="_social_login_form_btn _mar_t40 _mar_b60">
-              <button type="button" className="_social_login_form_btn_link _btn1">
-                Login now
+              <button
+                type="submit"
+                className="_social_login_form_btn_link _btn1"
+                disabled={isPending}
+              >
+                {isPending ? 'Signing in…' : 'Login now'}
               </button>
             </div>
           </div>
