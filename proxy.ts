@@ -185,6 +185,6 @@ export async function proxy(req: NextRequest) {
 // only run on user-facing pages.
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|assets/|uploads/|api/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sw.js|robots.txt|sitemap.xml|assets/|uploads/|api/).*)',
   ],
 };
