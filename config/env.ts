@@ -8,10 +8,16 @@ import 'server-only';
 
 const envSchema = z.object({
   API_URL: z.url('API_URL must be a valid URL'),
+
+  // Default depends on NODE_ENV — production is secure-by-default so a
+  // forgotten env never sends session cookies over plaintext. Explicit
+  // `COOKIE_SECURE=false` (e.g. local Docker over http) still works.
   COOKIE_SECURE: z
     .union([z.literal('true'), z.literal('false')])
-    .default('false')
-    .transform((v) => v === 'true'),
+    .optional()
+    .transform((v) =>
+      v === undefined ? process.env.NODE_ENV === 'production' : v === 'true',
+    ),
 });
 
 export const env = envSchema.parse({

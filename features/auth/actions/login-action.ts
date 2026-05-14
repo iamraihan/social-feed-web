@@ -3,22 +3,13 @@
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { ApiClientError } from '@/lib/api-client';
+import { logError } from '@/lib/safe-log';
 import { loginRequest } from '../api/auth-api';
 import { setSessionCookies } from '../lib/session';
 import { loginSchema, type LoginInput } from '../schemas/auth-schemas';
+import type { ActionResult } from '../types';
 
-// Server Action invoked directly by RHF's onSubmit with typed input —
-// no FormData round-trip, no useActionState. The action re-validates with
-// the same Zod schema (the client check is for UX; the server is the
-// source of truth) before touching the backend.
-
-export type LoginActionResult =
-  | { ok: true }
-  | {
-      ok: false;
-      fieldErrors?: Partial<Record<keyof LoginInput, string[]>>;
-      formError?: string;
-    };
+export type LoginActionResult = ActionResult<keyof LoginInput>;
 
 export async function loginAction(input: LoginInput): Promise<LoginActionResult> {
   const parsed = loginSchema.safeParse(input);
@@ -51,11 +42,18 @@ export async function loginAction(input: LoginInput): Promise<LoginActionResult>
       if (err.code === 'VALIDATION_FAILED') {
         return { ok: false, formError: err.details?.[0] ?? err.message };
       }
+      // Unknown semantic codes get logged then surfaced as a generic error.
+      logError('[auth/login] backend error', {
+        code: err.code,
+        status: err.status,
+      });
       return { ok: false, formError: err.message };
     }
+    logError('[auth/login] unexpected error', {
+      message: (err as Error).message,
+    });
     return { ok: false, formError: 'Something went wrong. Try again.' };
   }
 
-  // `redirect` throws — keep it outside try/catch so it isn't swallowed.
   redirect('/');
 }

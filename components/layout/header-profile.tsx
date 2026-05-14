@@ -34,11 +34,10 @@ export function HeaderProfile({ user }: HeaderProfileProps) {
         </p>
         <button
           type="button"
-          className="_header_nav_dropdown_btn _dropdown_toggle"
+          className="_header_nav_dropdown_btn _dropdown_toggle btn-reset"
           aria-label="Profile menu"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -58,6 +57,9 @@ export function HeaderProfile({ user }: HeaderProfileProps) {
       {open && (
         <div
           className="_nav_profile_dropdown _profile_dropdown"
+          // Design's CSS hides this with display:none by default — open
+          // state needs an explicit override. Kept as inline style because
+          // it's a single boolean toggle, not a reusable pattern.
           style={{ display: 'block' }}
         >
           <div className="_nav_profile_dropdown_info">
@@ -89,14 +91,7 @@ export function HeaderProfile({ user }: HeaderProfileProps) {
               <form action={logoutAction}>
                 <button
                   type="submit"
-                  className="_nav_dropdown_link"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    width: '100%',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                  }}
+                  className="_nav_dropdown_link nav-dropdown-form-button"
                 >
                   <div className="_nav_drop_info">Log Out</div>
                 </button>

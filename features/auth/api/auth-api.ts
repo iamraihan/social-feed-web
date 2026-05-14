@@ -13,6 +13,11 @@ const REFRESH_COOKIE_NAME = 'refresh_token';
 /**
  * Pluck the value of a single Set-Cookie header by name. Next.js' fetch
  * Response exposes cookies via `headers.getSetCookie()` (Node 18+).
+ *
+ * Cookie values are percent-encoded per RFC 6265 when they contain reserved
+ * characters (`+`, `/`, `=`, …). JWT refresh tokens are typically base64url
+ * so this round-trips unchanged today, but decoding here means the helper
+ * stays correct if the backend ever emits a token format that needs it.
  */
 function extractCookieValue(
   setCookieHeaders: string[],
@@ -23,7 +28,17 @@ function extractCookieValue(
     const [pair] = header.split(';');
     const eq = pair.indexOf('=');
     if (eq === -1) continue;
-    if (pair.slice(0, eq) === name) return pair.slice(eq + 1);
+    if (pair.slice(0, eq) === name) {
+      const raw = pair.slice(eq + 1);
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        // Malformed encoding — return raw so a downstream re-encode can't
+        // double-encode. Backend would still reject, but we surface the
+        // original string for debugging.
+        return raw;
+      }
+    }
   }
   return undefined;
 }

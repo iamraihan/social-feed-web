@@ -25,3 +25,16 @@ export interface RefreshResponse {
   accessToken: string;
   expiresIn: number;
 }
+
+// Generic shape returned by every form-driven server action. Discriminated
+// by `ok` so the form can branch cleanly. `fieldErrors` keys are the same
+// strings the form uses with RHF's setError, which gives end-to-end type
+// safety from Zod schema → action → form.
+
+export type ActionResult<TField extends string = string> =
+  | { ok: true }
+  | {
+      ok: false;
+      fieldErrors?: Partial<Record<TField, string[] | undefined>>;
+      formError?: string;
+    };

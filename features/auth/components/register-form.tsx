@@ -5,37 +5,79 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AppImage } from '@/components/ui/app-image';
 import { registerAction } from '../actions/register-action';
+import { applyServerErrors } from '../lib/apply-server-errors';
 import { registerSchema, type RegisterInput } from '../schemas/auth-schemas';
 
-// firstName / lastName are added on top of the static design — the backend
-// requires them. The rest of the form (Google button, Or divider, terms
-// checkbox, "Login now" button label which is a typo in the source HTML)
-// matches the design verbatim.
+// Same RHF-native flow as LoginForm. firstName / lastName are added on top
+// of the static design — the backend requires them.
+
+const HALF = 'col-xl-6 col-lg-6 col-md-6 col-sm-12';
+const FULL = 'col-xl-12 col-lg-12 col-md-12 col-sm-12';
+
+// Declarative field config. Each entry yields one input block via the map
+// below — `colClass` controls the grid width since name/lastName sit on
+// one row and the rest are full-width.
+const fields = [
+  {
+    name: 'firstName',
+    label: 'First name',
+    type: 'text',
+    autoComplete: 'given-name',
+    colClass: HALF,
+  },
+  {
+    name: 'lastName',
+    label: 'Last name',
+    type: 'text',
+    autoComplete: 'family-name',
+    colClass: HALF,
+  },
+  {
+    name: 'email',
+    label: 'Email',
+    type: 'email',
+    autoComplete: 'email',
+    colClass: FULL,
+  },
+  {
+    name: 'password',
+    label: 'Password',
+    type: 'password',
+    autoComplete: 'new-password',
+    colClass: FULL,
+  },
+  {
+    name: 'confirmPassword',
+    label: 'Repeat Password',
+    type: 'password',
+    autoComplete: 'new-password',
+    colClass: FULL,
+  },
+] as const satisfies ReadonlyArray<{
+  name: keyof RegisterInput;
+  label: string;
+  type: 'text' | 'email' | 'password';
+  autoComplete: string;
+  colClass: string;
+}>;
 
 export function RegisterForm() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty, isValid },
     setError,
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
-    mode: 'onBlur',
+    // See LoginForm for rationale — `onTouched` + isDirty + isValid gives
+    // the cleanest submit-gating UX without nagging the user as they type.
+    mode: 'onTouched',
   });
 
   const onSubmit: SubmitHandler<RegisterInput> = async (data) => {
     const result = await registerAction(data);
     if (result.ok) return;
-    if (result.fieldErrors) {
-      for (const [name, messages] of Object.entries(result.fieldErrors)) {
-        if (messages?.[0]) {
-          setError(name as keyof RegisterInput, { message: messages[0] });
-        }
-      }
-    }
-    if (result.formError) {
-      setError('root.serverError', { type: 'server', message: result.formError });
-    }
+    applyServerErrors(result, setError);
   };
 
   const serverError = errors.root?.serverError?.message;
@@ -75,115 +117,42 @@ export function RegisterForm() {
         noValidate
       >
         {serverError && (
-          <div role="alert" style={{ color: '#d32f2f', marginBottom: 12, fontSize: 14 }}>
+          <div role="alert" className="form-server-error">
             {serverError}
           </div>
         )}
 
         <div className="row">
-          <div className="col-xl-6 col-lg-6 col-md-6 col-sm-12">
-            <div className="_social_registration_form_input _mar_b14">
-              <label className="_social_registration_label _mar_b8" htmlFor="firstName">
-                First name
-              </label>
-              <input
-                id="firstName"
-                type="text"
-                autoComplete="given-name"
-                className="form-control _social_registration_input"
-                aria-invalid={!!errors.firstName}
-                {...register('firstName')}
-              />
-              {errors.firstName && (
-                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
-                  {errors.firstName.message}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="col-xl-6 col-lg-6 col-md-6 col-sm-12">
-            <div className="_social_registration_form_input _mar_b14">
-              <label className="_social_registration_label _mar_b8" htmlFor="lastName">
-                Last name
-              </label>
-              <input
-                id="lastName"
-                type="text"
-                autoComplete="family-name"
-                className="form-control _social_registration_input"
-                aria-invalid={!!errors.lastName}
-                {...register('lastName')}
-              />
-              {errors.lastName && (
-                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
-                  {errors.lastName.message}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
-            <div className="_social_registration_form_input _mar_b14">
-              <label className="_social_registration_label _mar_b8" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                className="form-control _social_registration_input"
-                aria-invalid={!!errors.email}
-                {...register('email')}
-              />
-              {errors.email && (
-                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
-            <div className="_social_registration_form_input _mar_b14">
-              <label className="_social_registration_label _mar_b8" htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                className="form-control _social_registration_input"
-                aria-invalid={!!errors.password}
-                {...register('password')}
-              />
-              {errors.password && (
-                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
-            <div className="_social_registration_form_input _mar_b14">
-              <label
-                className="_social_registration_label _mar_b8"
-                htmlFor="confirmPassword"
-              >
-                Repeat Password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                className="form-control _social_registration_input"
-                aria-invalid={!!errors.confirmPassword}
-                {...register('confirmPassword')}
-              />
-              {errors.confirmPassword && (
-                <p style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>
-                  {errors.confirmPassword.message}
-                </p>
-              )}
-            </div>
-          </div>
+          {fields.map((field) => {
+            const error = errors[field.name]?.message;
+            const errorId = error ? `${field.name}-error` : undefined;
+            return (
+              <div key={field.name} className={field.colClass}>
+                <div className="_social_registration_form_input _mar_b14">
+                  <label
+                    className="_social_registration_label _mar_b8"
+                    htmlFor={field.name}
+                  >
+                    {field.label}
+                  </label>
+                  <input
+                    id={field.name}
+                    type={field.type}
+                    autoComplete={field.autoComplete}
+                    className="form-control _social_registration_input"
+                    aria-invalid={!!error}
+                    aria-describedby={errorId}
+                    {...register(field.name)}
+                  />
+                  {error && (
+                    <p id={errorId} role="alert" className="form-field-error">
+                      {error}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="row">
@@ -191,14 +160,13 @@ export function RegisterForm() {
             <div className="form-check _social_registration_form_check">
               <input
                 className="form-check-input _social_registration_form_check_input"
-                type="radio"
-                name="flexRadioDefault"
-                id="flexRadioDefault2"
+                type="checkbox"
+                id="agreeTerms"
                 defaultChecked
               />
               <label
                 className="form-check-label _social_registration_form_check_label"
-                htmlFor="flexRadioDefault2"
+                htmlFor="agreeTerms"
               >
                 I agree to terms &amp; conditions
               </label>
@@ -212,9 +180,9 @@ export function RegisterForm() {
               <button
                 type="submit"
                 className="_social_registration_form_btn_link _btn1"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !isDirty || !isValid}
               >
-                {isSubmitting ? 'Creating account…' : 'Login now'}
+                {isSubmitting ? 'Creating account…' : 'Create account'}
               </button>
             </div>
           </div>

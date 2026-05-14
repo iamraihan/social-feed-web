@@ -3,17 +3,17 @@
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { ApiClientError } from '@/lib/api-client';
+import { logError } from '@/lib/safe-log';
 import { registerRequest } from '../api/auth-api';
 import { setSessionCookies } from '../lib/session';
-import { registerSchema, type RegisterInput } from '../schemas/auth-schemas';
+import {
+  backendRegisterSchema,
+  registerSchema,
+  type RegisterInput,
+} from '../schemas/auth-schemas';
+import type { ActionResult } from '../types';
 
-export type RegisterActionResult =
-  | { ok: true }
-  | {
-      ok: false;
-      fieldErrors?: Partial<Record<keyof RegisterInput, string[]>>;
-      formError?: string;
-    };
+export type RegisterActionResult = ActionResult<keyof RegisterInput>;
 
 export async function registerAction(
   input: RegisterInput,
@@ -27,9 +27,7 @@ export async function registerAction(
   }
 
   try {
-    // confirmPassword is a client-only check — strip it before hitting the backend.
-    const { confirmPassword, ...payload } = parsed.data;
-    void confirmPassword;
+    const payload = backendRegisterSchema.parse(parsed.data);
     const { tokens, refreshToken } = await registerRequest(payload);
     await setSessionCookies({
       accessToken: tokens.accessToken,
@@ -54,8 +52,15 @@ export async function registerAction(
       if (err.code === 'VALIDATION_FAILED') {
         return { ok: false, formError: err.details?.[0] ?? err.message };
       }
+      logError('[auth/register] backend error', {
+        code: err.code,
+        status: err.status,
+      });
       return { ok: false, formError: err.message };
     }
+    logError('[auth/register] unexpected error', {
+      message: (err as Error).message,
+    });
     return { ok: false, formError: 'Something went wrong. Try again.' };
   }
 

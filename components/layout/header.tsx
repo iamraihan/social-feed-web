@@ -1,6 +1,6 @@
 import { AppImage } from '@/components/ui/app-image';
 import Link from 'next/link';
-import { getSession } from '@/features/auth/lib/session';
+import { requireSession } from '@/features/auth/lib/session';
 import { HeaderProfile } from './header-profile';
 
 // Faithful port of feed.html's `<nav class="_header_nav">` block — logo,
@@ -8,9 +8,15 @@ import { HeaderProfile } from './header-profile';
 // counter badges, profile area with avatar + name + caret. The profile slice
 // reads the authenticated session and is the only Client subtree (it owns
 // the dropdown toggle + logout submit).
+//
+// `requireSession()` returns a guaranteed-non-null user (it redirects to
+// /login if the session cookie is missing or fails Zod validation), which
+// means orphaned-session edge cases — proxy lets the request through on
+// refresh_token but session_user is corrupted — are funneled back through
+// the auth handshake instead of silently rendering a profile-less header.
 
 export async function Header() {
-  const user = await getSession();
+  const user = await requireSession();
   return (
     <nav className="navbar navbar-expand-lg navbar-light _header_nav _padd_t10">
       <div className="container _custom_container">
@@ -144,7 +150,7 @@ export async function Header() {
             </li>
           </ul>
 
-          {user && <HeaderProfile user={user} />}
+          <HeaderProfile user={user} />
         </div>
       </div>
     </nav>
