@@ -1,9 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { Avatar } from '@/components/ui/avatar';
 import { useTogglePostLike } from '../hooks/use-toggle-post-like';
-import type { Post } from '../types';
+import type { LikeTarget, Post } from '../types';
 
 // Post reactions block. Mirrors the design's two-row layout:
 //
@@ -14,14 +13,17 @@ import type { Post } from '../types';
 //   └───────────────────────────────────────────────────────────────┘
 //
 // `topLikers` ships embedded in the feed response (backend window-function
-// query) — zero extra round-trips per card. Click-to-expand "Who liked"
-// modal is out of scope for this PR; the backend endpoint
-// (GET /likes/post/:id/users) already exists when that lands.
+// query) — zero extra round-trips per card. Clicking the like count opens
+// the LikersModal owned by PostCard (callback `onShowLikers`).
 
 const STACK_SIZE = 24;
 
 interface PostReactionsProps {
   post: Post;
+  /** Toggles the comment section open/closed (sibling of this component). */
+  onCommentClick: () => void;
+  commentsExpanded: boolean;
+  onShowLikers: (target: LikeTarget, targetId: string, total: number) => void;
 }
 
 /** Compact count: 1, 2, …, 9, then 9+ for 10 and above. Matches the design. */
@@ -30,14 +32,19 @@ function formatCompactCount(n: number): string {
   return String(n);
 }
 
-export function PostReactions({ post }: PostReactionsProps) {
+export function PostReactions({
+  post,
+  onCommentClick,
+  commentsExpanded,
+  onShowLikers,
+}: PostReactionsProps) {
   const { mutate: toggleLike, isPending } = useTogglePostLike();
 
   const handleLikeClick = () => {
     toggleLike({ postId: post.id, currentlyLiked: post.hasLiked });
   };
 
-  const commentCount = post.commentCount ?? 0;
+  const commentCount = post.commentCount;
   const shareCount = post.shareCount ?? 0;
 
   return (
@@ -45,7 +52,12 @@ export function PostReactions({ post }: PostReactionsProps) {
       <div className="_feed_inner_timeline_total_reacts _padd_r24 _padd_l24 _mar_b26">
         <div className="_feed_inner_timeline_total_reacts_image">
           {post.likeCount > 0 ? (
-            <>
+            <button
+              type="button"
+              className="btn-reset liker-summary-button"
+              onClick={() => onShowLikers('post', post.id, post.likeCount)}
+              aria-label={`See who liked this post (${post.likeCount})`}
+            >
               {post.topLikers.length > 0 && (
                 <span className="liker-stack" aria-hidden="true">
                   {post.topLikers.map((user) => (
@@ -59,13 +71,10 @@ export function PostReactions({ post }: PostReactionsProps) {
                   ))}
                 </span>
               )}
-              <span
-                className="liker-count-badge"
-                aria-label={`${post.likeCount} likes`}
-              >
+              <span className="liker-count-badge">
                 {formatCompactCount(post.likeCount)}
               </span>
-            </>
+            </button>
           ) : (
             <span className="liker-count-empty">Be the first to like</span>
           )}
@@ -73,9 +82,14 @@ export function PostReactions({ post }: PostReactionsProps) {
 
         <div className="_feed_inner_timeline_total_reacts_txt">
           <p className="_feed_inner_timeline_total_reacts_para1">
-            <Link href="#0">
+            <button
+              type="button"
+              className="btn-reset"
+              onClick={onCommentClick}
+              aria-expanded={commentsExpanded}
+            >
               <span>{commentCount}</span> Comment
-            </Link>
+            </button>
           </p>
           <p className="_feed_inner_timeline_total_reacts_para2">
             <span>{shareCount}</span> Share
@@ -111,7 +125,12 @@ export function PostReactions({ post }: PostReactionsProps) {
             </span>
           </span>
         </button>
-        <button type="button" className="_feed_inner_timeline_reaction_comment _feed_reaction btn-reset">
+        <button
+          type="button"
+          onClick={onCommentClick}
+          aria-expanded={commentsExpanded}
+          className="_feed_inner_timeline_reaction_comment _feed_reaction btn-reset"
+        >
           <span className="_feed_inner_timeline_reaction_link">
             <span>
               <svg
@@ -137,8 +156,14 @@ export function PostReactions({ post }: PostReactionsProps) {
             </span>
           </span>
         </button>
-        <button type="button" className="_feed_inner_timeline_reaction_share _feed_reaction btn-reset">
-          <Link href="#0" className="_feed_inner_timeline_reaction_link">
+        <button
+          type="button"
+          disabled
+          title="Coming soon"
+          aria-disabled="true"
+          className="_feed_inner_timeline_reaction_share _feed_reaction btn-reset"
+        >
+          <span className="_feed_inner_timeline_reaction_link">
             <span>
               <svg
                 className="_reaction_svg"
@@ -156,7 +181,7 @@ export function PostReactions({ post }: PostReactionsProps) {
               </svg>
               Share
             </span>
-          </Link>
+          </span>
         </button>
       </div>
     </>

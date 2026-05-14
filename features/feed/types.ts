@@ -20,16 +20,62 @@ export interface Post {
    */
   topLikers: PublicUser[];
   /**
-   * Total top-level comments on the post. Currently not exposed by the
-   * backend — when the comments feature lands, the backend will add this
-   * field to PostDto and these `?? 0` defaults in the UI become real.
+   * Top-level comments on the post (replies excluded). Embedded by the
+   * backend via a Prisma `_count` subquery on the comments relation — no
+   * extra round-trip per card.
    */
-  commentCount?: number;
-  /** Same shape — will populate when share feature lands. */
+  commentCount: number;
+  /**
+   * Most-recent top-level comment, embedded by the backend so the feed shows
+   * a single preview comment per card without a follow-up fetch. Null when
+   * the post has no comments yet. When the user expands the section, the
+   * full paginated list (GET /posts/:id/comments) takes over.
+   */
+  previewComment: Comment | null;
+  /** Share feature is a follow-up branch — defaulted to 0 in the UI today. */
   shareCount?: number;
   createdAt: string;
   updatedAt: string;
 }
+
+// Mirrors social-feed-api CommentDto. `parentId` discriminates:
+//   null     → top-level comment
+//   non-null → reply (parentId points at the parent comment)
+export interface Comment {
+  id: string;
+  postId: string;
+  parentId: string | null;
+  content: string;
+  author: PublicUser;
+  /** Replies under this comment. Always 0 for replies in our 1-level model. */
+  replyCount: number;
+  likeCount: number;
+  hasLiked: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommentPageMeta {
+  hasMore: boolean;
+  nextCursor: string | null;
+  limit: number;
+}
+
+export interface CommentPage {
+  data: Comment[];
+  meta: CommentPageMeta;
+}
+
+export interface LikerPageMeta extends CommentPageMeta {
+  total: number;
+}
+
+export interface LikerPage {
+  data: PublicUser[];
+  meta: LikerPageMeta;
+}
+
+export type LikeTarget = 'post' | 'comment' | 'reply';
 
 export interface Story {
   id: string;

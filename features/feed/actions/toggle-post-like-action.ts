@@ -3,7 +3,7 @@
 import { ApiClientError } from '@/lib/api-client';
 import { logError } from '@/lib/safe-log';
 import { requireSession } from '@/features/auth/lib/session';
-import { likePost, unlikePost } from '../api/likes-api';
+import { likeTarget, unlikeTarget } from '../api/likes-api';
 
 type ToggleLikeResult = { ok: true } | { ok: false; error: string };
 
@@ -14,9 +14,9 @@ export async function togglePostLikeAction(input: {
   await requireSession();
   try {
     if (input.liked) {
-      await likePost(input.postId);
+      await likeTarget('post', input.postId);
     } else {
-      await unlikePost(input.postId);
+      await unlikeTarget('post', input.postId);
     }
     return { ok: true };
   } catch (err) {
