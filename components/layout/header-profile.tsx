@@ -1,15 +1,22 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Avatar } from '@/components/ui/avatar';
-import { logoutAction } from '@/features/auth';
-import type { SessionUser } from '@/features/auth';
+import { useState } from "react";
+import Link from "next/link";
+import { Avatar } from "@/components/ui/avatar";
+import { Popover } from "@/components/ui/popover";
+import { logoutAction } from "@/features/auth";
+import type { SessionUser } from "@/features/auth";
 
-// Profile area of the header. The dropdown (View Profile / Settings /
-// Logout) needs onClick state, so this slice is the only Client Component
-// in the otherwise Server-rendered header. Logout submits the server action
-// directly via <form action={…}> — no client-side fetch required.
+// Profile area of the header — avatar + name + caret act as a single trigger
+// for the profile popover (matches the design's clickable-row behaviour).
+// Logout uses a Server Action via <form action={…}> so the browser never
+// sees a fetch round-trip — the action clears cookies + redirects server-
+// side.
+//
+// Avatar sized 32px so the visual scale matches the bell/chat icons next to
+// it; the design's `_header_nav_profile_image` container was 24px wide which
+// constrained an <img> but our initials variant ignores that constraint
+// (uses inline width/height to render a true circle).
 
 interface HeaderProfileProps {
   user: SessionUser;
@@ -17,91 +24,88 @@ interface HeaderProfileProps {
 
 export function HeaderProfile({ user }: HeaderProfileProps) {
   const [open, setOpen] = useState(false);
+  const displayName = `${user.firstName} ${user.lastName}`;
 
-  return (
-    <div className="_header_nav_profile">
-      <div className="_header_nav_profile_image">
+  const trigger = (
+    <button
+      type="button"
+      className="header-profile-trigger btn-reset"
+      aria-haspopup="menu"
+      aria-expanded={open}
+      onClick={() => setOpen((v) => !v)}
+    >
+      <span className="header-profile-avatar">
         <Avatar
           src={user.avatarKey}
-          alt={`${user.firstName} ${user.lastName}`}
-          name={`${user.firstName} ${user.lastName}`}
-          size={40}
+          alt={displayName}
+          name={displayName}
+          size={32}
           className="_nav_profile_img"
         />
-      </div>
-      <div className="_header_nav_dropdown">
-        <p className="_header_nav_para">
-          {user.firstName} {user.lastName}
-        </p>
-        <button
-          type="button"
-          className="_header_nav_dropdown_btn _dropdown_toggle btn-reset"
-          aria-label="Profile menu"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="10"
-            height="6"
-            fill="none"
-            viewBox="0 0 10 6"
-          >
-            <path
-              fill="#112032"
-              d="M5 5l.354.354L5 5.707l-.354-.353L5 5zm4.354-3.646l-4 4-.708-.708 4-4 .708.708zm-4.708 4l-4-4 .708-.708 4 4-.708.708z"
-            />
-          </svg>
-        </button>
-      </div>
+      </span>
+      <span className="header-profile-name">{displayName}</span>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="10"
+        height="6"
+        fill="none"
+        viewBox="0 0 10 6"
+        aria-hidden="true"
+        className="header-profile-caret"
+      >
+        <path
+          fill="#112032"
+          d="M5 5l.354.354L5 5.707l-.354-.353L5 5zm4.354-3.646l-4 4-.708-.708 4-4 .708.708zm-4.708 4l-4-4 .708-.708 4 4-.708.708z"
+        />
+      </svg>
+    </button>
+  );
 
-      {open && (
-        <div
-          className="_nav_profile_dropdown _profile_dropdown"
-          // Design's CSS hides this with display:none by default — open
-          // state needs an explicit override. Kept as inline style because
-          // it's a single boolean toggle, not a reusable pattern.
-          style={{ display: 'block' }}
-        >
-          <div className="_nav_profile_dropdown_info">
-            <div className="_nav_profile_dropdown_image">
-              <Avatar
-                src={user.avatarKey}
-                alt={`${user.firstName} ${user.lastName}`}
-                name={`${user.firstName} ${user.lastName}`}
-                size={48}
-                className="_nav_drop_img"
-              />
-            </div>
-            <div className="_nav_profile_dropdown_info_txt">
-              <h4 className="_nav_dropdown_title">
-                {user.firstName} {user.lastName}
-              </h4>
-              <Link href="#0" className="_nav_drop_profile">
-                View Profile
-              </Link>
-            </div>
-          </div>
-          <hr />
-          <ul className="_nav_dropdown_list">
-            <li className="_nav_dropdown_list_item">
-              <Link href="#0" className="_nav_dropdown_link">
-                <div className="_nav_drop_info">Settings</div>
-              </Link>
-            </li>
-            <li className="_nav_dropdown_list_item">
-              <form action={logoutAction}>
-                <button
-                  type="submit"
-                  className="_nav_dropdown_link nav-dropdown-form-button"
-                >
-                  <div className="_nav_drop_info">Log Out</div>
-                </button>
-              </form>
-            </li>
-          </ul>
+  return (
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      ariaLabel="Profile menu"
+      trigger={trigger}
+      className="header-profile-wrapper"
+      panelClassName="popover-panel header-profile-panel"
+    >
+      <div className="header-profile-info">
+        <Avatar
+          src={user.avatarKey}
+          alt={displayName}
+          name={displayName}
+          size={40}
+        />
+        <div className="header-profile-info-text">
+          <p className="header-profile-info-name">{displayName}</p>
+          <Link
+            href="#0"
+            className="header-profile-info-link"
+            onClick={() => setOpen(false)}
+          >
+            View Profile
+          </Link>
         </div>
-      )}
-    </div>
+      </div>
+      <hr className="header-profile-divider" />
+      <Link
+        href="#0"
+        role="menuitem"
+        className="popover-item"
+        onClick={() => setOpen(false)}
+      >
+        Settings
+      </Link>
+      <form action={logoutAction}>
+        <button
+          type="submit"
+          role="menuitem"
+          className="popover-item popover-item-danger header-profile-logout"
+        >
+          Log Out
+        </button>
+      </form>
+    </Popover>
   );
 }
