@@ -13,7 +13,7 @@ export const mockCurrentUser: PublicUser = {
   id: 'me-uuid',
   firstName: 'Dylan',
   lastName: 'Field',
-  avatarKey: '/assets/images/profile.png',
+  avatarKey: null,
 };
 
 export const mockSuggestedPeople: SuggestedPerson[] = [
@@ -21,21 +21,21 @@ export const mockSuggestedPeople: SuggestedPerson[] = [
     id: 'u2',
     firstName: 'Steve',
     lastName: 'Jobs',
-    avatarKey: '/assets/images/people1.png',
+    avatarKey: null,
     headline: 'CEO of Apple',
   },
   {
     id: 'u3',
     firstName: 'Ryan',
     lastName: 'Roslansky',
-    avatarKey: '/assets/images/people2.png',
+    avatarKey: null,
     headline: 'CEO of Linkedin',
   },
   {
     id: 'u4',
     firstName: 'Dylan',
     lastName: 'Field',
-    avatarKey: '/assets/images/people3.png',
+    avatarKey: null,
     headline: 'CEO of Figma',
   },
 ];
@@ -46,7 +46,7 @@ export const mockFriends: Friend[] = [
     firstName: 'Steve',
     lastName: 'Jobs',
     headline: 'CEO of Apple',
-    avatarKey: '/assets/images/people1.png',
+    avatarKey: null,
     online: false,
     lastSeen: '5 minute ago',
   },
@@ -55,7 +55,7 @@ export const mockFriends: Friend[] = [
     firstName: 'Ryan',
     lastName: 'Roslansky',
     headline: 'CEO of Linkedin',
-    avatarKey: '/assets/images/people2.png',
+    avatarKey: null,
     online: true,
   },
   {
@@ -63,7 +63,7 @@ export const mockFriends: Friend[] = [
     firstName: 'Dylan',
     lastName: 'Field',
     headline: 'CEO of Figma',
-    avatarKey: '/assets/images/people3.png',
+    avatarKey: null,
     online: true,
   },
   {
@@ -71,7 +71,7 @@ export const mockFriends: Friend[] = [
     firstName: 'Steve',
     lastName: 'Jobs',
     headline: 'CEO of Apple',
-    avatarKey: '/assets/images/people1.png',
+    avatarKey: null,
     online: false,
     lastSeen: '5 minute ago',
   },
@@ -83,6 +83,6 @@ export const mockYouMightLike: YouMightLikePerson[] = [
     firstName: 'Radovan',
     lastName: 'SkillArena',
     headline: 'Founder & CEO at Trophy',
-    avatarKey: '/assets/images/Avatar.png',
+    avatarKey: null,
   },
 ];

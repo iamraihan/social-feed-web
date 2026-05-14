@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { QueryProvider } from '@/components/providers/query-provider';
 import './globals.css';
 
 // Root metadata. Per-route pages override `title` via their own Metadata
@@ -36,7 +37,9 @@ export default function RootLayout({
         <link rel="stylesheet" href="/assets/css/main.css" />
         <link rel="stylesheet" href="/assets/css/responsive.css" />
       </head>
-      <body>{children}</body>
+      <body>
+        <QueryProvider>{children}</QueryProvider>
+      </body>
     </html>
   );
 }

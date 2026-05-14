@@ -55,9 +55,9 @@ export function YourFriendsCard() {
                     <Avatar
                       src={friend.avatarKey}
                       alt={`${friend.firstName} ${friend.lastName}`}
+                      name={`${friend.firstName} ${friend.lastName}`}
                       size={48}
                       className="_box_ppl_img"
-                      fallback="/assets/images/people1.png"
                     />
                   </Link>
                 </div>

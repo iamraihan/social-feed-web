@@ -2,7 +2,7 @@
 // updatedAt come back as ISO strings over JSON (not Date) — typed as string
 // here so callers don't accidentally call .toISOString() on a string.
 
-export type UserStatus = 'ACTIVE' | 'BLOCKED' | 'DELETED';
+type UserStatus = 'ACTIVE' | 'BLOCKED' | 'DELETED';
 
 export interface SessionUser {
   id: string;

@@ -133,3 +133,133 @@ a {
   text-align: left;
   cursor: pointer;
 }
+
+/* Composer image-preview + visibility selector. Co-located here because
+ * they're feed-specific atoms; would graduate to a CSS module once the
+ * feed feature has more bespoke UI. */
+.composer-image-preview {
+  position: relative;
+  margin-top: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.composer-image-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+  object-fit: cover;
+}
+
+.composer-image-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.composer-image-remove:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.composer-visibility {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 12px;
+}
+
+.composer-visibility-select {
+  background: #f5f7fa;
+  border: 1px solid #e1e5eb;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+}
+
+/* Accessibility helper — hide visually but keep available to screen
+ * readers + keyboard focus. Standard pattern. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Stacked Avatars for "who liked" — small circles overlapping with a white
+ * ring so distinct circles read cleanly. Same <Avatar> component as
+ * elsewhere; the CSS owns spacing + ring. Number of stacked avatars
+ * always equals the number of likers returned by the backend — never
+ * pads, never fakes. */
+.liker-stack {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+.liker-stack > * + * {
+  margin-left: -8px;
+}
+.liker-stack > * {
+  box-shadow: 0 0 0 2px #fff;
+  border-radius: 9999px;
+}
+
+/* Compact count badge that follows the liker stack ("9+" style from the
+ * design). Sits as a small blue chip so total like-count stays visible
+ * even when the stack only shows the top 3. */
+.liker-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 9999px;
+  background: #377dff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.liker-count-empty {
+  color: #888;
+  font-size: 13px;
+}
+
+/* Initials avatar — guarantees a perfect circle that no design-CSS class
+ * can squash. `!important` is heavy-handed but necessary: the design's
+ * `_post_img`, `_nav_profile_img`, `_box_ppl_img`, etc. were sized for
+ * <img> tags and try to apply object-fit / border / fixed dimensions that
+ * fight our dynamic `size` prop. */
+.avatar-initials {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 9999px !important;
+  flex-shrink: 0 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  user-select: none;
+  overflow: hidden;
+  box-sizing: border-box !important;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0 !important;
+}

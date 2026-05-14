@@ -1,20 +1,43 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { LeftSidebar } from '@/components/layout/left-sidebar';
 import { RightSidebar } from '@/components/layout/right-sidebar';
-// TODO(feed-integration): replace `mockPosts` with `await getFeed()` from
-// `@/features/feed/api` once the API integration branch lands. The Server
-// Component shape stays the same — just swap the import.
-import { Stories, PostComposer, PostCard, mockPosts } from '@/features/feed';
+import { requireSession } from '@/features/auth/lib/session';
+import { Stories, PostComposer, FeedList } from '@/features/feed';
+import { getFeed } from '@/features/feed/api/feed-api';
+import { ApiClientError } from '@/lib/api-client';
+import type { FeedPage } from '@/features/feed/types';
 
 export const metadata: Metadata = {
   title: 'Home',
 };
 
-// Home `/` mirrors feed.html's main layout:
-//   _custom_container > _layout_inner_wrap > row
-//     col-3 LeftSidebar | col-6 middle | col-3 RightSidebar
+// Server Component. Fetches the first feed page server-side so the user
+// sees real posts on first paint (no loading flash) and the response is
+// SEO-indexable. FeedList hydrates the cache with this page, then takes
+// over for infinite scroll on subsequent fetches.
+//
+// `requireSession()` is called both in (main)/layout.tsx and Header (cached
+// by React.cache), so this read is free.
+//
+// The proxy refreshes access_token pre-emptively when it's missing, so we
+// shouldn't normally hit 401 here. The try/catch below is a safety net for
+// the rare "token revoked between proxy and render" case — send the user
+// back through the auth handshake.
 
-export default function HomePage() {
+export default async function HomePage() {
+  const currentUser = await requireSession();
+
+  let initialPage: FeedPage;
+  try {
+    initialPage = await getFeed({ limit: 20 });
+  } catch (err) {
+    if (err instanceof ApiClientError && err.status === 401) {
+      redirect('/login');
+    }
+    throw err;
+  }
+
   return (
     <div className="container _custom_container">
       <div className="_layout_inner_wrap">
@@ -27,10 +50,11 @@ export default function HomePage() {
             <div className="_layout_middle_wrap">
               <div className="_layout_middle_inner">
                 <Stories />
-                <PostComposer />
-                {mockPosts.map((post) => (
-                  <PostCard key={post.id} post={post} />
-                ))}
+                <PostComposer currentUser={currentUser} />
+                <FeedList
+                  initialPage={initialPage}
+                  currentUser={currentUser}
+                />
               </div>
             </div>
           </div>

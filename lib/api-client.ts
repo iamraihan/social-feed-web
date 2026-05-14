@@ -1,7 +1,7 @@
-import 'server-only';
-import { env } from '@/config/env';
-import type { ApiError, ApiErrorCode, ApiSuccess } from './api-types';
-import { logError } from './safe-log';
+import "server-only";
+import { env } from "@/config/env";
+import type { ApiError, ApiErrorCode, ApiSuccess } from "./api-types";
+import { logError } from "./safe-log";
 
 // Thin typed wrapper around `fetch` that talks to the backend.
 //
@@ -36,7 +36,7 @@ export class ApiClientError extends Error {
     details?: string[];
   }) {
     super(args.message);
-    this.name = 'ApiClientError';
+    this.name = "ApiClientError";
     this.code = args.code;
     this.status = args.status;
     this.details = args.details;
@@ -44,7 +44,7 @@ export class ApiClientError extends Error {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   accessToken?: string;
   cookieHeader?: string;
@@ -57,32 +57,43 @@ interface RequestOptions {
   next?: NextFetchRequestConfig;
 }
 
-interface RequestResult<TData> {
+interface RequestResult<TData, TMeta = unknown> {
   data: TData;
+  /** Optional pagination/meta object from the backend envelope. */
+  meta?: TMeta;
   response: Response;
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 function statusToCode(status: number): ApiErrorCode {
-  if (status >= 500) return 'INTERNAL_SERVER_ERROR';
-  if (status === 429) return 'TOO_MANY_REQUESTS';
-  if (status === 415) return 'UNSUPPORTED_MEDIA_TYPE';
-  if (status === 413) return 'PAYLOAD_TOO_LARGE';
-  if (status === 409) return 'CONFLICT';
-  if (status === 404) return 'NOT_FOUND';
-  if (status === 403) return 'FORBIDDEN';
-  if (status === 401) return 'UNAUTHORIZED';
-  return 'BAD_REQUEST';
+  if (status >= 500) return "INTERNAL_SERVER_ERROR";
+  if (status === 429) return "TOO_MANY_REQUESTS";
+  if (status === 415) return "UNSUPPORTED_MEDIA_TYPE";
+  if (status === 413) return "PAYLOAD_TOO_LARGE";
+  if (status === 409) return "CONFLICT";
+  if (status === 404) return "NOT_FOUND";
+  if (status === 403) return "FORBIDDEN";
+  if (status === 401) return "UNAUTHORIZED";
+  return "BAD_REQUEST";
 }
 
-export async function apiRequest<TData>(
+export async function apiRequest<TData, TMeta = unknown>(
   path: string,
   options: RequestOptions = {},
-): Promise<RequestResult<TData>> {
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  if (options.body !== undefined) headers['Content-Type'] = 'application/json';
-  if (options.accessToken) headers.Authorization = `Bearer ${options.accessToken}`;
+): Promise<RequestResult<TData, TMeta>> {
+  // FormData carries its own multipart boundary in Content-Type — setting
+  // application/json would corrupt it. Detect and let the browser/runtime
+  // fill the header automatically.
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (options.body !== undefined && !isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (options.accessToken)
+    headers.Authorization = `Bearer ${options.accessToken}`;
   if (options.cookieHeader) headers.Cookie = options.cookieHeader;
 
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -96,7 +107,7 @@ export async function apiRequest<TData>(
   if (options.signal?.aborted) {
     controller.abort();
   } else {
-    options.signal?.addEventListener('abort', () => controller.abort(), {
+    options.signal?.addEventListener("abort", () => controller.abort(), {
       once: true,
     });
   }
@@ -104,29 +115,34 @@ export async function apiRequest<TData>(
   let response: Response;
   try {
     response = await fetch(`${env.API_URL}${path}`, {
-      method: options.method ?? 'GET',
+      method: options.method ?? "GET",
       headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-      cache: options.cache ?? 'no-store',
+      body:
+        options.body === undefined
+          ? undefined
+          : isFormData
+            ? (options.body as FormData)
+            : JSON.stringify(options.body),
+      cache: options.cache ?? "no-store",
       next: options.next,
       signal: controller.signal,
     });
   } catch (err) {
-    if ((err as Error).name === 'AbortError') {
-      logError('[api-client] request timed out', { path, timeoutMs });
+    if ((err as Error).name === "AbortError") {
+      logError("[api-client] request timed out", { path, timeoutMs });
       throw new ApiClientError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Request timed out. Please try again.',
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Request timed out. Please try again.",
         status: 504,
       });
     }
-    logError('[api-client] network failure', {
+    logError("[api-client] network failure", {
       path,
       message: (err as Error).message,
     });
     throw new ApiClientError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Backend is unreachable.',
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Backend is unreachable.",
       status: 0,
     });
   } finally {
@@ -143,10 +159,10 @@ export async function apiRequest<TData>(
   try {
     raw = (await response.json()) as ApiSuccess<TData> | ApiError;
   } catch {
-    logError('[api-client] non-JSON response', {
+    logError("[api-client] non-JSON response", {
       path,
       status: response.status,
-      contentType: response.headers.get('content-type'),
+      contentType: response.headers.get("content-type"),
     });
     throw new ApiClientError({
       code: statusToCode(response.status),
@@ -164,5 +180,5 @@ export async function apiRequest<TData>(
     });
   }
 
-  return { data: raw.data, response };
+  return { data: raw.data, meta: raw.meta as TMeta | undefined, response };
 }

@@ -13,19 +13,20 @@ export interface Post {
   author: PublicUser;
   likeCount: number;
   hasLiked: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Comment {
-  id: string;
-  postId: string;
-  parentId: string | null;
-  content: string;
-  author: PublicUser;
-  replyCount: number;
-  likeCount: number;
-  hasLiked: boolean;
+  /**
+   * Up to 3 most recent likers, embedded by the backend in a single window-
+   * function query — eliminates the per-card N+1 we used to do via
+   * `usePostLikers`. Empty array when no one has liked yet.
+   */
+  topLikers: PublicUser[];
+  /**
+   * Total top-level comments on the post. Currently not exposed by the
+   * backend — when the comments feature lands, the backend will add this
+   * field to PostDto and these `?? 0` defaults in the UI become real.
+   */
+  commentCount?: number;
+  /** Same shape — will populate when share feature lands. */
+  shareCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,4 +36,15 @@ export interface Story {
   name: string;
   imageKey: string;
   miniImageKey: string;
+}
+
+export interface FeedMeta {
+  hasMore: boolean;
+  nextCursor: string | null;
+  limit: number;
+}
+
+export interface FeedPage {
+  data: Post[];
+  meta: FeedMeta;
 }

@@ -1,44 +1,84 @@
-import { AppImage } from '@/components/ui/app-image';
+'use client';
+
 import Link from 'next/link';
+import { Avatar } from '@/components/ui/avatar';
+import { useTogglePostLike } from '../hooks/use-toggle-post-like';
+import type { Post } from '../types';
 
-// _feed_inner_timeline_total_reacts (stack of react images + comment / share
-// counts) followed by _feed_inner_timeline_reaction (the Haha / Comment /
-// Share button row).
+// Post reactions block. Mirrors the design's two-row layout:
+//
+//   ┌───────────────────────────────────────────────────────────────┐
+//   │ [A1][A2][A3] 9+              12 Comment    122 Share          │  ← summary row
+//   ├───────────────────────────────────────────────────────────────┤
+//   │ [♥ Liked]    [💬 Comment]    [📤 Share]                       │  ← action row
+//   └───────────────────────────────────────────────────────────────┘
+//
+// `topLikers` ships embedded in the feed response (backend window-function
+// query) — zero extra round-trips per card. Click-to-expand "Who liked"
+// modal is out of scope for this PR; the backend endpoint
+// (GET /likes/post/:id/users) already exists when that lands.
 
-const reactImgs = [
-  '/assets/images/react_img1.png',
-  '/assets/images/react_img2.png',
-  '/assets/images/react_img3.png',
-  '/assets/images/react_img4.png',
-  '/assets/images/react_img5.png',
-] as const;
+const STACK_SIZE = 24;
 
-export function PostReactions() {
+interface PostReactionsProps {
+  post: Post;
+}
+
+/** Compact count: 1, 2, …, 9, then 9+ for 10 and above. Matches the design. */
+function formatCompactCount(n: number): string {
+  if (n > 9) return '9+';
+  return String(n);
+}
+
+export function PostReactions({ post }: PostReactionsProps) {
+  const { mutate: toggleLike, isPending } = useTogglePostLike();
+
+  const handleLikeClick = () => {
+    toggleLike({ postId: post.id, currentlyLiked: post.hasLiked });
+  };
+
+  const commentCount = post.commentCount ?? 0;
+  const shareCount = post.shareCount ?? 0;
+
   return (
     <>
       <div className="_feed_inner_timeline_total_reacts _padd_r24 _padd_l24 _mar_b26">
         <div className="_feed_inner_timeline_total_reacts_image">
-          {reactImgs.map((src, i) => (
-            <AppImage
-              key={src}
-              src={src}
-              alt=""
-              width={24}
-              height={24}
-              className={i === 0 ? '_react_img1' : '_react_img _rect_img_mbl_none'}
-              unoptimized
-            />
-          ))}
-          <p className="_feed_inner_timeline_total_reacts_para">9+</p>
+          {post.likeCount > 0 ? (
+            <>
+              {post.topLikers.length > 0 && (
+                <span className="liker-stack" aria-hidden="true">
+                  {post.topLikers.map((user) => (
+                    <Avatar
+                      key={user.id}
+                      src={user.avatarKey}
+                      alt=""
+                      name={`${user.firstName} ${user.lastName}`}
+                      size={STACK_SIZE}
+                    />
+                  ))}
+                </span>
+              )}
+              <span
+                className="liker-count-badge"
+                aria-label={`${post.likeCount} likes`}
+              >
+                {formatCompactCount(post.likeCount)}
+              </span>
+            </>
+          ) : (
+            <span className="liker-count-empty">Be the first to like</span>
+          )}
         </div>
+
         <div className="_feed_inner_timeline_total_reacts_txt">
           <p className="_feed_inner_timeline_total_reacts_para1">
             <Link href="#0">
-              <span>12</span> Comment
+              <span>{commentCount}</span> Comment
             </Link>
           </p>
           <p className="_feed_inner_timeline_total_reacts_para2">
-            <span>122</span> Share
+            <span>{shareCount}</span> Share
           </p>
         </div>
       </div>
@@ -46,30 +86,32 @@ export function PostReactions() {
       <div className="_feed_inner_timeline_reaction">
         <button
           type="button"
-          className="_feed_inner_timeline_reaction_emoji _feed_reaction _feed_reaction_active"
+          onClick={handleLikeClick}
+          disabled={isPending}
+          aria-pressed={post.hasLiked}
+          aria-label={post.hasLiked ? 'Unlike post' : 'Like post'}
+          className={
+            post.hasLiked
+              ? '_feed_inner_timeline_reaction_emoji _feed_reaction _feed_reaction_active btn-reset'
+              : '_feed_inner_timeline_reaction_emoji _feed_reaction btn-reset'
+          }
         >
           <span className="_feed_inner_timeline_reaction_link">
             <span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" fill="none" viewBox="0 0 19 19">
-                <path fill="#FFCC4D" d="M9.5 19a9.5 9.5 0 100-19 9.5 9.5 0 000 19z" />
-                <path
-                  fill="#664500"
-                  d="M9.5 11.083c-1.912 0-3.181-.222-4.75-.527-.358-.07-1.056 0-1.056 1.055 0 2.111 2.425 4.75 5.806 4.75 3.38 0 5.805-2.639 5.805-4.75 0-1.055-.697-1.125-1.055-1.055-1.57.305-2.838.527-4.75.527z"
-                />
-                <path
-                  fill="#fff"
-                  d="M4.75 11.611s1.583.528 4.75.528 4.75-.528 4.75-.528-1.056 2.111-4.75 2.111-4.75-2.11-4.75-2.11z"
-                />
-                <path
-                  fill="#664500"
-                  d="M6.333 8.972c.729 0 1.32-.827 1.32-1.847s-.591-1.847-1.32-1.847c-.729 0-1.32.827-1.32 1.847s.591 1.847 1.32 1.847zM12.667 8.972c.729 0 1.32-.827 1.32-1.847s-.591-1.847-1.32-1.847c-.729 0-1.32.827-1.32 1.847s.591 1.847 1.32 1.847z"
-                />
-              </svg>
-              Haha
+              {post.hasLiked ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#e0245e">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.8">
+                  <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                </svg>
+              )}
+              {post.hasLiked ? 'Liked' : 'Like'}
             </span>
           </span>
         </button>
-        <button type="button" className="_feed_inner_timeline_reaction_comment _feed_reaction">
+        <button type="button" className="_feed_inner_timeline_reaction_comment _feed_reaction btn-reset">
           <span className="_feed_inner_timeline_reaction_link">
             <span>
               <svg
@@ -95,8 +137,8 @@ export function PostReactions() {
             </span>
           </span>
         </button>
-        <button type="button" className="_feed_inner_timeline_reaction_share _feed_reaction">
-          <span className="_feed_inner_timeline_reaction_link">
+        <button type="button" className="_feed_inner_timeline_reaction_share _feed_reaction btn-reset">
+          <Link href="#0" className="_feed_inner_timeline_reaction_link">
             <span>
               <svg
                 className="_reaction_svg"
@@ -114,7 +156,7 @@ export function PostReactions() {
               </svg>
               Share
             </span>
-          </span>
+          </Link>
         </button>
       </div>
     </>
