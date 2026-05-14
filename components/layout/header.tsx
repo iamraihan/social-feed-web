@@ -1,14 +1,22 @@
 import { AppImage } from '@/components/ui/app-image';
 import Link from 'next/link';
-import { Avatar } from '@/components/ui/avatar';
-import { mockCurrentUser } from '@/features/users';
+import { requireSession } from '@/features/auth/lib/session';
+import { HeaderProfile } from './header-profile';
 
 // Faithful port of feed.html's `<nav class="_header_nav">` block — logo,
 // search field, four nav icons (home active / friends / notify / chat) with
-// counter badges, profile area with avatar + name + caret. Profile dropdown
-// is omitted in the static design (closed state).
+// counter badges, profile area with avatar + name + caret. The profile slice
+// reads the authenticated session and is the only Client subtree (it owns
+// the dropdown toggle + logout submit).
+//
+// `requireSession()` returns a guaranteed-non-null user (it redirects to
+// /login if the session cookie is missing or fails Zod validation), which
+// means orphaned-session edge cases — proxy lets the request through on
+// refresh_token but session_user is corrupted — are funneled back through
+// the auth handshake instead of silently rendering a profile-less header.
 
-export function Header() {
+export async function Header() {
+  const user = await requireSession();
   return (
     <nav className="navbar navbar-expand-lg navbar-light _header_nav _padd_t10">
       <div className="container _custom_container">
@@ -142,35 +150,7 @@ export function Header() {
             </li>
           </ul>
 
-          <div className="_header_nav_profile">
-            <div className="_header_nav_profile_image">
-              <Avatar
-                src={mockCurrentUser.avatarKey}
-                alt=""
-                size={40}
-                className="_nav_profile_img"
-              />
-            </div>
-            <div className="_header_nav_dropdown">
-              <p className="_header_nav_para">
-                {mockCurrentUser.firstName} {mockCurrentUser.lastName}
-              </p>
-              <button type="button" className="_header_nav_dropdown_btn _dropdown_toggle" aria-label="Profile menu">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="10"
-                  height="6"
-                  fill="none"
-                  viewBox="0 0 10 6"
-                >
-                  <path
-                    fill="#112032"
-                    d="M5 5l.354.354L5 5.707l-.354-.353L5 5zm4.354-3.646l-4 4-.708-.708 4-4 .708.708zm-4.708 4l-4-4 .708-.708 4 4-.708.708z"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <HeaderProfile user={user} />
         </div>
       </div>
     </nav>

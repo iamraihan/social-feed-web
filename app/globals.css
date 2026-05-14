@@ -47,3 +47,89 @@ a {
     color-scheme: dark;
   }
 }
+
+/* Shared validation message styling. Single source so error appearance
+ * stays consistent across every form in the app. */
+.form-field-error {
+  color: #d32f2f;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.form-server-error {
+  color: #d32f2f;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+/* Utility-page styles (loading / error / not-found / global-error). Used
+ * by the framework boundaries — kept in globals so CSP can stay strict
+ * (no inline style attributes on those pages). */
+.page-centered {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #666;
+  padding: 24px;
+}
+
+.page-centered__heading {
+  font-size: 24px;
+  margin-bottom: 12px;
+  color: #222;
+}
+
+.page-centered__message {
+  color: #666;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.page-centered__link {
+  color: #377dff;
+  text-decoration: underline;
+}
+
+.skeleton-page {
+  padding: 80px;
+  text-align: center;
+  color: #666;
+}
+
+.btn-primary {
+  padding: 10px 20px;
+  background: #377dff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid #112032;
+  outline-offset: 2px;
+}
+
+.btn-reset {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-reset:focus-visible {
+  outline: 2px solid #112032;
+  outline-offset: 2px;
+}
+
+/* Header profile dropdown logout button — replaces the inline style attr
+ * so CSP can disallow style-attr if we ever tighten further. */
+.nav-dropdown-form-button {
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}

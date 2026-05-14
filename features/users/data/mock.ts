@@ -5,6 +5,10 @@ import type {
   YouMightLikePerson,
 } from '../types';
 
+// TODO(feed-integration): components currently importing this should switch
+// to getSession() / a passed-down `user` prop. Header already does the right
+// thing via @/features/auth. Remaining callers:
+//   features/feed/components/{post-composer,comment-box,stories}.tsx
 export const mockCurrentUser: PublicUser = {
   id: 'me-uuid',
   firstName: 'Dylan',
