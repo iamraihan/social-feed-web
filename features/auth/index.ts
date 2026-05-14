@@ -4,9 +4,12 @@
 // deliberately NOT re-exported here — they live in `./lib/session` behind
 // `'server-only'` and must be imported via the deep path so the marker
 // stays effective and they never bleed into a client bundle.
+//
+// Only symbols actually imported from outside the feature appear here.
+// Internal consumers (login-form, register-form, logout-action, etc.)
+// import each other via relative paths.
+
 export { LoginForm } from './components/login-form';
 export { RegisterForm } from './components/register-form';
-export { loginAction, type LoginActionResult } from './actions/login-action';
-export { registerAction, type RegisterActionResult } from './actions/register-action';
 export { logoutAction } from './actions/logout-action';
-export type { SessionUser, AuthTokens, UserStatus } from './types';
+export type { SessionUser } from './types';

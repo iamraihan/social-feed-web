@@ -13,7 +13,13 @@ const nextConfig: NextConfig = {
   // the host header isn't trustworthy (custom proxies, multi-domain).
   experimental: {
     serverActions: {
-      bodySizeLimit: '2mb',
+      // Must accommodate the post composer's image upload. Image cap is 5 MB
+      // (MAX_IMAGE_MB in features/feed/schemas/post-schemas.ts) — 6 MB
+      // leaves headroom for the multipart envelope + small text content.
+      // If we drop bodySizeLimit below MAX_IMAGE_BYTES, Next.js returns 413
+      // before our action runs and the user sees a generic error instead of
+      // our "Image must be 5 MB or smaller" message.
+      bodySizeLimit: '6mb',
       allowedOrigins:
         process.env.NEXT_PUBLIC_APP_ORIGIN
           ? [process.env.NEXT_PUBLIC_APP_ORIGIN]
@@ -24,8 +30,15 @@ const nextConfig: NextConfig = {
   // Remote image hosts the AppImage / Avatar may load from. Local images
   // ship in /public and don't need remotePatterns. The backend serves
   // user-uploaded avatars at /uploads/** — register them so Next.js can
-  // optimise + serve WebP for those URLs once the feed API integration
-  // sends real image keys.
+  // optimise + serve WebP for those URLs.
+  //
+  // SSRF guard: Next.js 16 refuses to fetch optimized images whose host
+  // resolves to a private IP (loopback / RFC 1918) by default — protects
+  // against tricked URLs probing your private network. In local dev the
+  // backend IS on a private IP (127.0.0.1 / ::1), so we opt out via
+  // `dangerouslyAllowLocalIP` — guarded to dev only. In production the
+  // backend lives on a public hostname, so the flag must stay off and the
+  // guard does its job.
   images: {
     remotePatterns: [
       {
@@ -34,7 +47,10 @@ const nextConfig: NextConfig = {
         port: '8000',
         pathname: '/uploads/**',
       },
+      // Add your prod backend host here when you deploy, e.g.:
+      // { protocol: 'https', hostname: 'api.example.com', pathname: '/uploads/**' },
     ],
+    dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
   },
 
   // Baseline security headers for every response. The CSP here is a

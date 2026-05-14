@@ -24,5 +24,3 @@ export const env = envSchema.parse({
   API_URL: process.env.API_URL,
   COOKIE_SECURE: process.env.COOKIE_SECURE,
 });
-
-export type Env = z.infer<typeof envSchema>;

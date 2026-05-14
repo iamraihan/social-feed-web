@@ -13,7 +13,7 @@ import {
 } from '../schemas/auth-schemas';
 import type { ActionResult } from '../types';
 
-export type RegisterActionResult = ActionResult<keyof RegisterInput>;
+type RegisterActionResult = ActionResult<keyof RegisterInput>;
 
 export async function registerAction(
   input: RegisterInput,

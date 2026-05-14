@@ -25,9 +25,9 @@ export function YouMightLikeCard() {
                   <Avatar
                     src={person.avatarKey}
                     alt={`${person.firstName} ${person.lastName}`}
+                    name={`${person.firstName} ${person.lastName}`}
                     size={48}
                     className="_ppl_img"
-                    fallback="/assets/images/Avatar.png"
                   />
                 </Link>
               </div>

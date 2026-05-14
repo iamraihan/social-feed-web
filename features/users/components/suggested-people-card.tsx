@@ -25,9 +25,9 @@ export function SuggestedPeopleCard() {
                   <Avatar
                     src={person.avatarKey}
                     alt={`${person.firstName} ${person.lastName}`}
+                    name={`${person.firstName} ${person.lastName}`}
                     size={48}
                     className="_info_img"
-                    fallback="/assets/images/people1.png"
                   />
                 </Link>
               </div>

@@ -9,7 +9,7 @@ import { setSessionCookies } from '../lib/session';
 import { loginSchema, type LoginInput } from '../schemas/auth-schemas';
 import type { ActionResult } from '../types';
 
-export type LoginActionResult = ActionResult<keyof LoginInput>;
+type LoginActionResult = ActionResult<keyof LoginInput>;
 
 export async function loginAction(input: LoginInput): Promise<LoginActionResult> {
   const parsed = loginSchema.safeParse(input);

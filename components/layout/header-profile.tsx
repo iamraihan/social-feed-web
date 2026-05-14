@@ -23,7 +23,8 @@ export function HeaderProfile({ user }: HeaderProfileProps) {
       <div className="_header_nav_profile_image">
         <Avatar
           src={user.avatarKey}
-          alt=""
+          alt={`${user.firstName} ${user.lastName}`}
+          name={`${user.firstName} ${user.lastName}`}
           size={40}
           className="_nav_profile_img"
         />
@@ -66,7 +67,8 @@ export function HeaderProfile({ user }: HeaderProfileProps) {
             <div className="_nav_profile_dropdown_image">
               <Avatar
                 src={user.avatarKey}
-                alt=""
+                alt={`${user.firstName} ${user.lastName}`}
+                name={`${user.firstName} ${user.lastName}`}
                 size={48}
                 className="_nav_drop_img"
               />
