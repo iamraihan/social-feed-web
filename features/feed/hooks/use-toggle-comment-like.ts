@@ -166,11 +166,23 @@ export function useToggleCommentLike() {
     },
 
     onSettled: (_data, _err, vars) => {
-      const key =
+      // Reconcile the comments/replies cache the optimistic patch touched.
+      const containerKey =
         vars.target === 'comment'
           ? feedKeys.comments(vars.containerId)
           : feedKeys.replies(vars.containerId);
-      queryClient.invalidateQueries({ queryKey: key });
+      queryClient.invalidateQueries({ queryKey: containerKey });
+
+      // For top-level comments we also patched every cached feed list's
+      // `previewComment` (and the detail's). Invalidate those too — without
+      // it, a divergent server response (rate-limit, race) would leave the
+      // collapsed-state preview stuck on the stale like state forever.
+      if (vars.target === 'comment') {
+        queryClient.invalidateQueries({ queryKey: feedKeys.lists() });
+        queryClient.invalidateQueries({
+          queryKey: feedKeys.detail(vars.containerId),
+        });
+      }
     },
   });
 }

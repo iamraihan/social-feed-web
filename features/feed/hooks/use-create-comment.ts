@@ -107,5 +107,14 @@ export function useCreateComment(postId: string) {
         });
       }
     },
+
+    // Reconcile with server truth — the optimistic prepend uses the row the
+    // action returned, which is already server-authoritative, BUT if anything
+    // else triggers a refetch of page 0 (window focus, other tab posting),
+    // without invalidation the optimistic row would briefly duplicate the
+    // refetched one. A targeted invalidate is the simplest guarantee.
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: feedKeys.comments(postId) });
+    },
   });
 }

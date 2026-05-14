@@ -71,7 +71,17 @@ export function Modal({
     return () => {
       document.removeEventListener('keydown', onKeydown);
       document.body.style.overflow = previousOverflow;
-      previouslyFocused.current?.focus();
+      // Optimistic deletes (e.g. delete post / delete comment) unmount the
+      // trigger before the dialog closes, so the captured node is no longer
+      // in the DOM. `.focus()` on a detached node silently no-ops and focus
+      // falls to <body> — an a11y regression. Fall back to <main> so keyboard
+      // users land somewhere sensible.
+      const previous = previouslyFocused.current;
+      if (previous?.isConnected) {
+        previous.focus();
+      } else {
+        document.querySelector<HTMLElement>('main')?.focus();
+      }
     };
   }, [open]);
 
