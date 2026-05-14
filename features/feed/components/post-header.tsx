@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Avatar } from '@/components/ui/avatar';
-import { deletePostAction } from '../actions/delete-post-action';
-import type { Post } from '../types';
+import { useState, useSyncExternalStore } from "react";
+import { Avatar } from "@/components/ui/avatar";
+import { deletePostAction } from "../actions/delete-post-action";
+import type { Post } from "../types";
 
 // Top row of a post — avatar, name, relative time, visibility, 3-dot menu.
 // Menu owns its open/close state so this slice is a Client Component.
@@ -17,21 +17,35 @@ interface PostHeaderProps {
 function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const m = Math.floor(ms / 60_000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m} minute${m === 1 ? '' : 's'} ago`;
+  if (m < 1) return "just now";
+  if (m < 60) return `${m} minute${m === 1 ? "" : "s"} ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} hour${h === 1 ? '' : 's'} ago`;
+  if (h < 24) return `${h} hour${h === 1 ? "" : "s"} ago`;
   const d = Math.floor(h / 24);
-  if (d < 30) return `${d} day${d === 1 ? '' : 's'} ago`;
+  if (d < 30) return `${d} day${d === 1 ? "" : "s"} ago`;
   return new Date(iso).toLocaleDateString();
 }
+
+// Relative-time labels depend on Date.now() and the browser's locale, both
+// of which differ from the server. useSyncExternalStore returns false during
+// SSR and true after hydration, so we render the stable ISO on the server
+// and swap to the relative label on the client without cascading renders.
+const subscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export function PostHeader({ post, isOwnPost }: PostHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const isClient = useSyncExternalStore(
+    subscribe,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
+  const timeLabel = isClient ? timeAgo(post.createdAt) : post.createdAt;
 
   async function handleDelete() {
-    if (!confirm('Delete this post? This cannot be undone.')) return;
+    if (!confirm("Delete this post? This cannot be undone.")) return;
     setIsDeleting(true);
     const result = await deletePostAction(post.id);
     setIsDeleting(false);
@@ -58,8 +72,11 @@ export function PostHeader({ post, isOwnPost }: PostHeaderProps) {
             {post.author.firstName} {post.author.lastName}
           </h4>
           <p className="_feed_inner_timeline_post_box_para">
-            {timeAgo(post.createdAt)} .{' '}
-            <span>{post.visibility === 'PUBLIC' ? 'Public' : 'Private'}</span>
+            <time dateTime={post.createdAt} suppressHydrationWarning>
+              {timeLabel}
+            </time>
+            {" . "}
+            <span>{post.visibility === "PUBLIC" ? "Public" : "Private"}</span>
           </p>
         </div>
       </div>
@@ -88,7 +105,7 @@ export function PostHeader({ post, isOwnPost }: PostHeaderProps) {
         {menuOpen && isOwnPost && (
           <div
             className="_feed_timeline_dropdown _timeline_dropdown"
-            style={{ display: 'block' }}
+            style={{ display: "block" }}
           >
             <ul className="_feed_timeline_dropdown_list">
               <li className="_feed_timeline_dropdown_item">
@@ -98,7 +115,7 @@ export function PostHeader({ post, isOwnPost }: PostHeaderProps) {
                   disabled={isDeleting}
                   className="_feed_timeline_dropdown_link nav-dropdown-form-button"
                 >
-                  {isDeleting ? 'Deleting…' : 'Delete Post'}
+                  {isDeleting ? "Deleting…" : "Delete Post"}
                 </button>
               </li>
             </ul>
