@@ -42,15 +42,11 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '8000',
-        pathname: '/uploads/**',
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        pathname: '/dsverqsdg/**',
       },
-      // Add your prod backend host here when you deploy, e.g.:
-      // { protocol: 'https', hostname: 'api.example.com', pathname: '/uploads/**' },
     ],
-    dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
   },
 
   // Baseline security headers for every response. The CSP here is a
@@ -66,7 +62,7 @@ const nextConfig: NextConfig = {
       `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
       `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
       `font-src 'self' https://fonts.gstatic.com`,
-      `img-src 'self' data: blob: ${apiOrigin}`,
+      `img-src 'self' data: blob: ${apiOrigin} https://res.cloudinary.com`,
       `connect-src 'self' ${apiOrigin}`,
       `frame-ancestors 'none'`,
       `base-uri 'self'`,
